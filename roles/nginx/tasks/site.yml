@@ -1,0 +1,71 @@
+- name: Ensure webroot exists for {{ item.domain }}
+  file:
+    path: "/srv/{{ item.domain }}/html"
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Create a basic index.html for {{ item.domain }} if missing
+  template:
+    src: index-html.j2
+    dest: "/srv/{{ item.domain }}/html/index.html"
+    owner: www-data
+    group: www-data
+    mode: '0644'
+    force: no
+
+- name: Render nginx site config for {{ item.domain }}
+  template:
+    src: nginx-site.j2
+    dest: "/etc/nginx/sites-available/{{ item.domain }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload nginx
+
+- name: Ensure site is enabled (symlink) for {{ item.domain }}
+  file:
+    src: "/etc/nginx/sites-available/{{ item.domain }}"
+    dest: "/etc/nginx/sites-enabled/{{ item.domain }}"
+    state: link
+    force: no
+  notify: Reload nginx
+
+- name: Ensure default site disabled (if present)
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload nginx
+
+- name: Check whether certificate for {{ item.domain }} exists
+  stat:
+    path: "/etc/letsencrypt/live/{{ item.domain }}/fullchain.pem"
+  register: cert_exists
+
+- name: Acquire LetsEncrypt certificate for {{ item.domain }} (staged={{ certbot_staging }})
+  when: not cert_exists.stat.exists
+  block:
+    - name: Build certbot command args
+      set_fact:
+        certbot_cmd: >-
+          certbot --nginx -n --agree-tos
+          --email {{ email }}
+          {{ '--staging' if certbot_staging else '' }}
+          {{ '--redirect' }}
+          -d {{ item.domain }}
+
+    - name: Run certbot for {{ item.domain }}
+      command: "{{ certbot_cmd }}"
+      register: certbot_result
+      changed_when: "'Congratulations' in certbot_result.stdout or certbot_result.rc == 0"
+
+    - name: Fail if certbot failed for {{ item.domain }}
+      fail:
+        msg: "Certbot failed for {{ item.domain }}: {{ certbot_result.stdout }} {{ certbot_result.stderr }}"
+      when: certbot_result.rc != 0 and "'Congratulations' not in certbot_result.stdout"
+
+- name: Touch a marker file indicating site was managed
+  file:
+    path: "/etc/ansible-managed-sites/{{ item.domain }}"
+    state: touch

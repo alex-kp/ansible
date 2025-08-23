@@ -1,0 +1,49 @@
+- hosts: webservers
+  become: true
+  tasks:
+    - name: Stop nginx service
+      service:
+        name: nginx
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove nginx packages
+      apt:
+        name:
+          - nginx
+          - python3-certbot-nginx
+        state: absent
+        purge: yes
+        autoremove: yes
+        update_cache: yes
+
+    - name: Remove nginx site configs
+      file:
+        path: /etc/nginx/sites-available
+        state: absent
+
+    - name: Remove nginx enabled sites
+      file:
+        path: /etc/nginx/sites-enabled
+        state: absent
+
+    - name: Remove nginx config directory
+      file:
+        path: /etc/nginx
+        state: absent
+
+    - name: Remove nginx web roots
+      file:
+        path: /srv
+        state: absent
+
+    - name: Remove certbot certificates
+      file:
+        path: /etc/letsencrypt
+        state: absent
+
+    - name: Remove certbot logs
+      file:
+        path: /var/log/letsencrypt
+        state: absent
+

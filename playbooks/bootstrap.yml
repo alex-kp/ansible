@@ -1,0 +1,46 @@
+# ansible-playbook -i "<<HOST>>," bootstrap.yml --user root --ask-pass 
+
+- hosts: all
+  become: yes
+  vars:
+    deploy_user: deploy
+    deploy_pubkey: "{{ lookup('file', './deploy_key.pub') }}"
+
+  tasks:
+    - name: Create deploy user
+      user:
+        name: "{{ deploy_user }}"
+        shell: /bin/bash
+        create_home: yes
+
+    - name: Authorize SSH key for deploy user
+      authorized_key:
+        user: "{{ deploy_user }}"
+        key: "{{ deploy_pubkey }}"
+
+    - name: Allow deploy user passwordless sudo
+      copy:
+        dest: "/etc/sudoers.d/{{ deploy_user }}"
+        content: "{{ deploy_user }} ALL=(ALL) NOPASSWD:ALL\n"
+        mode: '0440'
+
+#     - name: Install UFW firewall
+#       apt:
+#         name: ufw
+#         state: present
+#         update_cache: yes
+# 
+#     - name: Allow SSH, HTTP, HTTPS in UFW
+#       ufw:
+#         rule: allow
+#         port: "{{ item }}"
+#       loop:
+#         - ssh
+#         - http
+#         - https
+# 
+#     - name: Enable UFW firewall
+#       ufw:
+#         state: enabled
+#         policy: deny
+# 

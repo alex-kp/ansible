@@ -1,0 +1,37 @@
+- name: Ensure apt cache is up to date
+  apt:
+    update_cache: yes
+  changed_when: false
+
+- name: Install NGINX and Certbot
+  apt:
+    name:
+      - nginx
+      - python3-certbot-nginx
+    state: present
+    update_cache: yes
+
+- name: Ensure NGINX is enabled and running
+  systemd:
+    name: nginx
+    enabled: yes
+    state: started
+
+- name: Ensure directory for sites list exists (for debugging)
+  file:
+    path: /etc/ansible-managed-sites
+    state: directory
+    mode: '0755'
+
+- name: Configure all sites
+  include_tasks: site.yml
+  loop: "{{ sites }}"
+
+- name: Set up cron job for certbot renew (only once)
+  when: certbot_auto_renew_cron is defined
+  cron:
+    name: "certbot renew"
+    job: "certbot renew --quiet --deploy-hook 'systemctl reload nginx'"
+    minute: "0"
+    hour: "3"
+    user: root

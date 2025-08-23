@@ -1,0 +1,20 @@
+server {
+    listen 80;
+    listen [::]:80;
+    server_name {{ item.domain }};
+
+    root /srv/{{ item.domain }}/html;
+    index index.html index.htm;
+
+    access_log /var/log/nginx/{{ item.domain }}.access.log;
+    error_log  /var/log/nginx/{{ item.domain }}.error.log;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    # Optionally a healthcheck endpoint that Certbot's validation can use
+    location /.well-known/acme-challenge/ {
+        root /srv/{{ item.domain }}/html;
+    }
+}

@@ -1,0 +1,37 @@
+---
+- name: Configure Nginx reverse proxy
+  hosts: webservers
+  become: true
+
+# ansible-playbook -i inventories/inventory.ini \
+#     playbooks/nginx-reverse-proxy.yml \
+#     -e 'domain=xx.example.com' \
+#     -e 'httpport=1234' \
+
+  tasks:
+    - name: Deploy Nginx site config for reverse proxy
+      ansible.builtin.template:
+        src: nginx-reverse-proxy.j2
+        dest: /etc/nginx/sites-available/{{ domain }}
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable site by symlink
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/{{ domain }}
+        dest: /etc/nginx/sites-enabled/{{ domain }}
+        state: link
+        force: yes
+
+    - name: Test Nginx configuration
+      ansible.builtin.command: nginx -t
+      register: nginx_test
+      failed_when: nginx_test.rc != 0
+      changed_when: false
+
+    - name: Reload Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: reloaded
+

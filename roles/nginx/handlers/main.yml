@@ -1,0 +1,5 @@
+# roles/nginx/handlers/main.yml
+- name: Reload nginx
+  systemd:
+    name: nginx
+    state: reloaded
