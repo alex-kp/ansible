@@ -46,12 +46,12 @@
 - name: Acquire LetsEncrypt certificate for {{ item.domain }} (staged={{ certbot_staging }})
   when: not cert_exists.stat.exists
   block:
-    - name: Build certbot command args
+    - name: Build certbot command args (staged={{ certbot_staging | bool }})
       set_fact:
         certbot_cmd: >-
           certbot --nginx -n --agree-tos
           --email {{ email }}
-          {{ '--staging' if certbot_staging else '' }}
+          {{ '--staging' if (certbot_staging | bool) else '' }}
           {{ '--redirect' }}
           -d {{ item.domain }}
 
