@@ -1,10 +1,10 @@
-# ansible-playbook -i "<<HOST>>," bootstrap.yml --user root --ask-pass 
+# ansible-playbook -e "public_key_path=~/.ssh/id_rsa.pub "-i "<<HOST>>," bootstrap.yml --user root --ask-pass 
 
 - hosts: all
   become: yes
   vars:
     deploy_user: deploy
-    deploy_pubkey: "{{ lookup('file', './deploy_key.pub') }}"
+    deploy_pubkey: "{{ lookup('file', public_key_path) }}"
 
   tasks:
     - name: Create deploy user
